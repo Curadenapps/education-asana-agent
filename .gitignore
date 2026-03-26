@@ -1,0 +1,17 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Truth cache (written at runtime by notion-sync agent)
+.truth-cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Node (if src/ is ever scaffolded)
+node_modules/
+dist/
