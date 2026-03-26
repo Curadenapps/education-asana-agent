@@ -117,7 +117,7 @@ Required environment variables:
 | Variable | Purpose | Agent |
 |----------|---------|-------|
 | `ANTHROPIC_API_KEY` | Claude model access | All |
-| `NOTION_API_KEY` | Notion REST API (`secret_...` internal token) | notion-sync |
+| `NOTION_API_KEY` | Notion REST API (`ntn_...` internal integration token) | notion-sync |
 | `NOTION_ROOT_DATABASE_ID` | `86b68fc172dd43ff8ee3219a3a5435f6` | notion-sync |
 | `ASANA_ACCESS_TOKEN` | Asana API | truth-catcher, brand-asset, asana-maintenance |
 | `ASANA_PROJECT_GID` | BOB App Asana project GID | truth-catcher, asana-maintenance |
