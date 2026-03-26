@@ -29,6 +29,6 @@ jobs:
           CLAUDE_CODE_USE_BEDROCK: "0"
         run: |
           claude --print \
-            --no-update-notifier \
+            --bare \
             "$(cat skills/curaden-communications/SKILL.md)" \
             "Trigger: schedule — weekly-broadcast. Run the BOB Weekly Broadcast procedure defined in this skill."
