@@ -31,4 +31,4 @@ jobs:
           CLAUDE_CODE_USE_BEDROCK: "0"
           DISABLE_AUTOUPDATER: "1"
         run: |
-          cat agents/figma.md | claude -p "Trigger: schedule — figma-diff-check. Run the full execution workflow defined in this agent spec."
+          claude -p "Run the figma-diff agent: read agents/figma.md and execute its workflow. Trigger: schedule — figma-diff-check."

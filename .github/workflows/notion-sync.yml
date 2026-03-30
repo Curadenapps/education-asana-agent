@@ -29,4 +29,4 @@ jobs:
           CLAUDE_CODE_USE_BEDROCK: "0"
           DISABLE_AUTOUPDATER: "1"
         run: |
-          cat agents/notion-sync.md | claude -p "Trigger: schedule — pre-scan-notion-sync. Run the full execution workflow defined in this agent spec."
+          claude -p "Run the notion-sync agent: read agents/notion-sync.md and execute its workflow. Trigger: schedule — pre-scan-notion-sync."
