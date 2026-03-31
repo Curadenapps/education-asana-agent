@@ -6,6 +6,8 @@ const JIRA_EMAIL = process.env.JIRA_EMAIL;
 const JIRA_TOKEN = process.env.JIRA_API_TOKEN;
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "https://curaden.atlassian.net/rest/api/3";
 const JIRA_PROJECT_KEY = process.env.JIRA_PROJECT_KEY || "BOB";
+const ASANA_TOKEN = process.env.ASANA_ACCESS_TOKEN;
+const ASANA_PROJECT_GID = process.env.ASANA_PROJECT_GID;
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -19,6 +21,18 @@ async function queryJira(jql) {
   });
   const data = await response.json();
   return data.issues || [];
+}
+
+async function queryAsana(sectionName) {
+  const tasksUrl = `https://app.asana.com/api/1.0/projects/${ASANA_PROJECT_GID}/tasks?opt_fields=name,assignee.name,completed,due_on,notes&limit=50`;
+  const response = await fetch(tasksUrl, {
+    headers: {
+      "Authorization": `Bearer ${ASANA_TOKEN}`,
+      "Accept": "application/json"
+    }
+  });
+  const data = await response.json();
+  return data.data || [];
 }
 
 async function createNotionPage(title, children) {
@@ -70,12 +84,19 @@ function dividerBlock() {
   return { type: "divider", divider: {} };
 }
 
-function formatIssue(issue) {
+function formatJiraIssue(issue) {
   const key = issue.key;
   const summary = issue.fields.summary;
   const priority = issue.fields.priority?.name || "";
   const assignee = issue.fields.assignee?.displayName || "Unassigned";
-  return { key, summary, priority, assignee };
+  return { key, summary, priority, assignee, source: "Jira" };
+}
+
+function formatAsanaTask(task) {
+  const name = task.name;
+  const assignee = task.assignee?.name || "Unassigned";
+  const due = task.due_on || "";
+  return { key: "Asana", summary: name, assignee, due, source: "Asana" };
 }
 
 async function main() {
@@ -86,22 +107,52 @@ async function main() {
     process.exit(1);
   }
   
-  if (!JIRA_TOKEN) {
-    console.error("ERROR: JIRA_API_TOKEN not set");
-    process.exit(1);
-  }
-  
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   
-  console.log("Fetching Jira data...");
+  console.log("Fetching data from Jira and Asana...");
   
-  const [doneIssues, inProgressIssues, blockers] = await Promise.all([
-    queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = Done AND updated >= "${sevenDaysAgo}" ORDER BY updated DESC`),
-    queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = "In Progress" ORDER BY updated DESC`),
-    queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done AND (labels = "blocked" OR priority in ("Highest", "High")) ORDER BY priority DESC`)
-  ]);
+  let doneIssues = [];
+  let inProgressIssues = [];
+  let blockers = [];
   
-  console.log(`Done: ${doneIssues.length}, In Progress: ${inProgressIssues.length}, Blockers: ${blockers.length}`);
+  // Fetch Jira data if configured
+  if (JIRA_TOKEN && JIRA_EMAIL) {
+    try {
+      const jiraResults = await Promise.all([
+        queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = Done AND updated >= "${sevenDaysAgo}" ORDER BY updated DESC`),
+        queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = "In Progress" ORDER BY updated DESC`),
+        queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done AND (labels = "blocked" OR priority in ("Highest", "High")) ORDER BY priority DESC`)
+      ]);
+      doneIssues = jiraResults[0].map(formatJiraIssue);
+      inProgressIssues = jiraResults[1].map(formatJiraIssue);
+      blockers = jiraResults[2].map(formatJiraIssue);
+      console.log(`Jira - Done: ${doneIssues.length}, In Progress: ${inProgressIssues.length}, Blockers: ${blockers.length}`);
+    } catch (e) {
+      console.log(`Jira error: ${e.message}`);
+    }
+  }
+  
+  // Fetch Asana data if configured
+  if (ASANA_TOKEN && ASANA_PROJECT_GID) {
+    try {
+      const allTasks = await queryAsana();
+      const completedTasks = allTasks.filter(t => t.completed);
+      const pendingTasks = allTasks.filter(t => !t.completed);
+      
+      // Add Asana tasks to the lists
+      const asanaDone = completedTasks.map(formatAsanaTask);
+      const asanaInProgress = pendingTasks.map(formatAsanaTask);
+      
+      doneIssues = [...doneIssues, ...asanaDone];
+      inProgressIssues = [...inProgressIssues, ...asanaInProgress];
+      
+      console.log(`Asana - Done: ${asanaDone.length}, In Progress: ${asanaInProgress.length}`);
+    } catch (e) {
+      console.log(`Asana error: ${e.message}`);
+    }
+  }
+  
+  console.log(`Total - Done: ${doneIssues.length}, In Progress: ${inProgressIssues.length}, Blockers: ${blockers.length}`);
   
   const blocks = [
     paragraphBlock(`Generated: ${today}`),
@@ -112,9 +163,11 @@ async function main() {
   if (doneIssues.length === 0) {
     blocks.push(paragraphBlock("None this week."));
   } else {
-    doneIssues.forEach(issue => {
-      const { key, summary } = formatIssue(issue);
-      blocks.push(paragraphBlock(`${key} — ${summary}`));
+    doneIssues.forEach(item => {
+      let text = `${item.summary}`;
+      if (item.source === "Jira") text = `${item.key} — ${item.summary}`;
+      if (item.assignee) text += ` (${item.assignee})`;
+      blocks.push(paragraphBlock(text));
     });
   }
   blocks.push(dividerBlock());
@@ -123,9 +176,12 @@ async function main() {
   if (inProgressIssues.length === 0) {
     blocks.push(paragraphBlock("None this week."));
   } else {
-    inProgressIssues.forEach(issue => {
-      const { key, summary, assignee } = formatIssue(issue);
-      blocks.push(paragraphBlock(`${key} — ${summary} (${assignee})`));
+    inProgressIssues.forEach(item => {
+      let text = `${item.summary}`;
+      if (item.source === "Jira") text = `${item.key} — ${item.summary}`;
+      if (item.assignee) text += ` (${item.assignee})`;
+      if (item.due) text += ` Due: ${item.due}`;
+      blocks.push(paragraphBlock(text));
     });
   }
   blocks.push(dividerBlock());
@@ -134,9 +190,10 @@ async function main() {
   if (blockers.length === 0) {
     blocks.push(paragraphBlock("None this week."));
   } else {
-    blockers.forEach(issue => {
-      const { key, summary, priority } = formatIssue(issue);
-      blocks.push(paragraphBlock(`${key} — ${summary} ⚠️ ${priority}`));
+    blockers.forEach(item => {
+      let text = `${item.key} — ${item.summary}`;
+      if (item.priority) text += ` ⚠️ ${item.priority}`;
+      blocks.push(paragraphBlock(text));
     });
   }
   blocks.push(dividerBlock());
