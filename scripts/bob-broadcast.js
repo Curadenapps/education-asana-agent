@@ -132,10 +132,11 @@ async function main() {
   // Fetch Jira data if configured
   if (JIRA_TOKEN && JIRA_EMAIL) {
     try {
+      console.log(`Querying Jira project: ${JIRA_PROJECT_KEY}`);
       const jiraResults = await Promise.all([
         queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = Done AND updated >= "${sevenDaysAgo}" ORDER BY updated DESC`),
-        queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = "In Progress" ORDER BY updated DESC`),
-        queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done AND (labels = "blocked" OR priority in ("Highest", "High")) ORDER BY priority DESC`)
+        queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done ORDER BY updated DESC`),
+        queryJira(`project = ${JIRA_PROJECT_KEY} AND (labels = "blocked" OR priority in ("Highest", "High")) ORDER BY priority DESC`)
       ]);
       doneIssues = jiraResults[0].map(formatJiraIssue);
       inProgressIssues = jiraResults[1].map(formatJiraIssue);
