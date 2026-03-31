@@ -120,7 +120,9 @@ async function main() {
   
   // Fetch Jira
   if (JIRA_TOKEN && JIRA_EMAIL) {
+    console.log(`Jira: email=${JIRA_EMAIL}, project=${JIRA_PROJECT_KEY}`);
     try {
+      console.log(`Jira: Fetching...`);
       const [done, inProgress, blockers] = await Promise.all([
         queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = Done AND updated >= "${sevenDaysAgo}" ORDER BY updated DESC`),
         queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done ORDER BY updated DESC LIMIT 20`),
@@ -133,10 +135,17 @@ async function main() {
     } catch (e) {
       console.log(`Jira error: ${e.message}`);
     }
+  } else {
+    console.log("Jira: Skipping (token or email missing)");
+    console.log(`  JIRA_EMAIL: ${JIRA_EMAIL ? "set" : "MISSING"}`);
+    console.log(`  JIRA_TOKEN: ${JIRA_TOKEN ? "set" : "MISSING"}`);
+    console.log(`  JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY || "MISSING"}`);
+  }
   }
   
   // Fetch Asana
   if (ASANA_TOKEN && ASANA_PROJECT_GID) {
+    console.log(`Asana: project=${ASANA_PROJECT_GID}`);
     try {
       asanaTasks = await queryAsana();
       asanaTasks = asanaTasks.filter(t => !t.completed);
@@ -144,6 +153,11 @@ async function main() {
     } catch (e) {
       console.log(`Asana error: ${e.message}`);
     }
+  } else {
+    console.log("Asana: Skipping (token or project GID missing)");
+    console.log(`  ASANA_TOKEN: ${ASANA_TOKEN ? "set" : "MISSING"}`);
+    console.log(`  ASANA_PROJECT_GID: ${ASANA_PROJECT_GID || "MISSING"}`);
+  }
   }
   
   // Categorize Asana tasks
