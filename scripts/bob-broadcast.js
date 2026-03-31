@@ -13,6 +13,7 @@ const today = new Date().toISOString().split('T')[0];
 
 async function queryJira(jql) {
   const url = `${JIRA_BASE_URL}/search?jql=${encodeURIComponent(jql)}&maxResults=50&fields=key,summary,status,priority,assignee`;
+  console.log(`Jira API URL: ${url}`);
   const response = await fetch(url, {
     headers: {
       "Authorization": `Basic ${Buffer.from(JIRA_EMAIL + ":" + JIRA_TOKEN).toString('base64')}`,
@@ -20,11 +21,16 @@ async function queryJira(jql) {
     }
   });
   const data = await response.json();
+  console.log(`Jira response status: ${response.status}`);
+  if (data.errorMessages) {
+    console.log("Jira errors:", JSON.stringify(data.errorMessages, null, 2));
+  }
   return data.issues || [];
 }
 
 async function queryAsana(sectionName) {
   const tasksUrl = `https://app.asana.com/api/1.0/projects/${ASANA_PROJECT_GID}/tasks?opt_fields=name,assignee.name,completed,due_on,notes&limit=50`;
+  console.log(`Asana API URL: ${tasksUrl}`);
   const response = await fetch(tasksUrl, {
     headers: {
       "Authorization": `Bearer ${ASANA_TOKEN}`,
@@ -32,6 +38,14 @@ async function queryAsana(sectionName) {
     }
   });
   const data = await response.json();
+  console.log(`Asana response status: ${response.status}`);
+  console.log(`Asana tasks count: ${data.data?.length || 0}`);
+  if (data.data?.length > 0) {
+    console.log("Sample Asana task:", JSON.stringify(data.data[0], null, 2));
+  }
+  if (data.errors) {
+    console.log("Asana errors:", JSON.stringify(data.errors, null, 2));
+  }
   return data.data || [];
 }
 
