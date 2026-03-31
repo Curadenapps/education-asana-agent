@@ -183,18 +183,51 @@ async function main() {
   blocks.push(paragraphBlock([richText(`📅 BOB Weekly Update - ${dateStr}`, { bold: true })]));
   blocks.push(paragraphBlock([richText('━━━━━━━━━━━━━━━━━━', {})]));
   
-  // Technical - Jira (In Progress)
-  if (jiraInProgress.length > 0) {
+  // Technical - Jira
+  if (jiraInProgress.length > 0 || jiraDone.length > 0) {
     blocks.push(heading2Block('🔧 Technical · Jira'));
-    jiraInProgress.forEach(issue => {
-      const key = issue.key;
-      const summary = issue.fields.summary;
-      const status = issue.fields.status?.name || 'In Progress';
-      blocks.push(paragraphBlock([
-        richText(`• ${key} - ${summary} | `, { bold: true }),
-        richText(status, {})
-      ]));
-    });
+    
+    // Delayed/Blocked
+    if (jiraBlockers.length > 0) {
+      blocks.push(paragraphBlock([richText('Blocked:', { italic: true })]));
+      jiraBlockers.forEach(issue => {
+        const key = issue.key;
+        const summary = issue.fields.summary;
+        const priority = issue.fields.priority?.name || '';
+        blocks.push(paragraphBlock([
+          richText(`• ${key} - ${summary} | `, { bold: true }),
+          underlineText(priority || 'Blocked')
+        ]));
+      });
+      blocks.push(paragraphBlock([richText('')]));
+    }
+    
+    // Next Week (In Progress)
+    if (jiraInProgress.length > 0) {
+      blocks.push(paragraphBlock([richText('Next Week:', { italic: true })]));
+      jiraInProgress.forEach(issue => {
+        const key = issue.key;
+        const summary = issue.fields.summary;
+        const status = issue.fields.status?.name || 'In Progress';
+        blocks.push(paragraphBlock([
+          richText(`• ${key} - ${summary} | `, { bold: true }),
+          richText(status, {})
+        ]));
+      });
+      blocks.push(paragraphBlock([richText('')]));
+    }
+    
+    // Done this week
+    if (jiraDone.length > 0) {
+      blocks.push(paragraphBlock([richText('Done This Week:', { italic: true })]));
+      jiraDone.forEach(issue => {
+        const key = issue.key;
+        const summary = issue.fields.summary;
+        blocks.push(paragraphBlock([
+          richText(`• ${key} - ${summary}`, { bold: true })
+        ]));
+      });
+    }
     blocks.push(dividerBlock());
   }
   
@@ -239,8 +272,6 @@ async function main() {
     }
     blocks.push(dividerBlock());
   }
-  
-  blocks.push(paragraphBlock([richText('━━━━━━━━━━━━━━━━━━', {})]));
   
   const title = `BOB Weekly Update - ${dateStr}`;
   console.log(`Creating Notion page: ${title}...`);
