@@ -5,7 +5,7 @@ const PARENT_PAGE_ID = process.env.NOTION_BROADCAST_PARENT_ID || "3347e8aabbb480
 const JIRA_EMAIL = process.env.JIRA_EMAIL;
 const JIRA_TOKEN = process.env.JIRA_API_TOKEN;
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "https://curaden.atlassian.net/rest/api/3";
-const JIRA_PROJECT_KEY = process.env.JIRA_PROJECT_KEY || "BOB";
+const JIRA_PROJECT_KEY = process.env.JIRA_PROJECT_KEY || "BA";
 const ASANA_TOKEN = process.env.ASANA_ACCESS_TOKEN;
 const ASANA_PROJECT_GID = process.env.ASANA_PROJECT_GID || "1204489225205419";
 
@@ -118,7 +118,6 @@ async function main() {
   let jiraDone = [], jiraInProgress = [], jiraBlockers = [];
   let asanaTasks = [];
   
-  // Fetch Jira
   if (JIRA_TOKEN && JIRA_EMAIL) {
     console.log(`Jira: email=${JIRA_EMAIL}, project=${JIRA_PROJECT_KEY}`);
     try {
@@ -141,9 +140,7 @@ async function main() {
     console.log(`  JIRA_TOKEN: ${JIRA_TOKEN ? "set" : "MISSING"}`);
     console.log(`  JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY || "MISSING"}`);
   }
-  }
   
-  // Fetch Asana
   if (ASANA_TOKEN && ASANA_PROJECT_GID) {
     console.log(`Asana: project=${ASANA_PROJECT_GID}`);
     try {
@@ -159,7 +156,6 @@ async function main() {
     console.log(`  ASANA_PROJECT_GID: ${ASANA_PROJECT_GID || "MISSING"}`);
   }
   
-  // Categorize Asana tasks
   const asanaDone = [];
   const asanaNextWeek = [];
   const asanaDelayed = [];
@@ -179,7 +175,6 @@ async function main() {
     }
   });
   
-  // Sort by due date
   const sortByDue = (a, b) => {
     if (!a.due_on) return 1;
     if (!b.due_on) return -1;
@@ -189,18 +184,14 @@ async function main() {
   asanaNextWeek.sort(sortByDue);
   asanaDone.sort(sortByDue);
   
-  // Build Notion page blocks
   const blocks = [];
   
-  // Header
   blocks.push(paragraphBlock([richText(`📅 BOB Weekly Update - ${dateStr}`, { bold: true })]));
   blocks.push(paragraphBlock([richText('━━━━━━━━━━━━━━━━━━', {})]));
   
-  // Technical - Jira
   if (jiraInProgress.length > 0 || jiraDone.length > 0) {
     blocks.push(heading2Block('🔧 Technical · Jira'));
     
-    // Delayed/Blocked
     if (jiraBlockers.length > 0) {
       blocks.push(paragraphBlock([richText('Blocked:', { italic: true })]));
       jiraBlockers.forEach(issue => {
@@ -215,7 +206,6 @@ async function main() {
       blocks.push(paragraphBlock([richText('')]));
     }
     
-    // Next Week (In Progress)
     if (jiraInProgress.length > 0) {
       blocks.push(paragraphBlock([richText('Next Week:', { italic: true })]));
       jiraInProgress.forEach(issue => {
@@ -230,7 +220,6 @@ async function main() {
       blocks.push(paragraphBlock([richText('')]));
     }
     
-    // Done this week
     if (jiraDone.length > 0) {
       blocks.push(paragraphBlock([richText('Done This Week:', { italic: true })]));
       jiraDone.forEach(issue => {
@@ -244,11 +233,9 @@ async function main() {
     blocks.push(dividerBlock());
   }
   
-  // Business - Asana
   if (asanaTasks.length > 0) {
     blocks.push(heading2Block('📋 Business · Asana'));
     
-    // Delayed
     if (asanaDelayed.length > 0) {
       blocks.push(paragraphBlock([richText('Overdue:', { italic: true })]));
       asanaDelayed.forEach(task => {
@@ -261,7 +248,6 @@ async function main() {
       blocks.push(paragraphBlock([richText('')]));
     }
     
-    // Next week
     if (asanaNextWeek.length > 0) {
       blocks.push(paragraphBlock([richText('Next Week:', { italic: true })]));
       asanaNextWeek.forEach(task => {
@@ -274,7 +260,6 @@ async function main() {
       blocks.push(paragraphBlock([richText('')]));
     }
     
-    // Future/No due date
     if (asanaDone.length > 0) {
       blocks.push(paragraphBlock([richText('Upcoming:', { italic: true })]));
       asanaDone.forEach(task => {
