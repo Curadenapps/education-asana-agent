@@ -19,16 +19,9 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
-
       - name: Run BOB weekly broadcast
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-          NOTION_ROOT_DATABASE_ID: ${{ secrets.NOTION_ROOT_DATABASE_ID }}
-          DRY_RUN: ${{ secrets.DRY_RUN || 'true' }}
-          CLAUDE_CODE_USE_BEDROCK: "0"
-          DISABLE_AUTOUPDATER: "1"
-        run: |
-          claude -p "Run the BOB weekly broadcast: read skills/curaden-communications/SKILL.md and execute its workflow. Trigger: schedule — weekly-broadcast."
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          NOTION_BROADCAST_PARENT_ID: ${{ secrets.NOTION_BROADCAST_PARENT_ID || '3347e8aabbb480908aa2dfc2fd478ff9' }}
+        run: node scripts/bob-broadcast.js
