@@ -2,9 +2,10 @@
 
 const NOTION_TOKEN = process.env.NOTION_API_KEY;
 const PARENT_PAGE_ID = process.env.NOTION_BROADCAST_PARENT_ID || "3347e8aabbb480908aa2dfc2fd478ff9";
+const JIRA_EMAIL = process.env.JIRA_EMAIL;
 const JIRA_TOKEN = process.env.JIRA_API_TOKEN;
 const JIRA_BASE_URL = process.env.JIRA_BASE_URL || "https://curaden.atlassian.net/rest/api/3";
-const JIRA_PROJECT_KEY = "BOB";
+const JIRA_PROJECT_KEY = process.env.JIRA_PROJECT_KEY || "BOB";
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -12,7 +13,7 @@ async function queryJira(jql) {
   const url = `${JIRA_BASE_URL}/search?jql=${encodeURIComponent(jql)}&maxResults=50&fields=key,summary,status,priority,assignee`;
   const response = await fetch(url, {
     headers: {
-      "Authorization": `Basic ${Buffer.from(JIRA_TOKEN).toString('base64')}`,
+      "Authorization": `Basic ${Buffer.from(JIRA_EMAIL + ":" + JIRA_TOKEN).toString('base64')}`,
       "Accept": "application/json"
     }
   });
@@ -96,7 +97,7 @@ async function main() {
   
   const [doneIssues, inProgressIssues, blockers] = await Promise.all([
     queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = Done AND updated >= "${sevenDaysAgo}" ORDER BY updated DESC`),
-    queryJira(`project = ${JIRA_PROJECT_KEY} AND status in ("In Progress", "In Review") ORDER BY priority DESC`),
+    queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = "In Progress" ORDER BY updated DESC`),
     queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done AND (labels = "blocked" OR priority in ("Highest", "High")) ORDER BY priority DESC`)
   ]);
   
