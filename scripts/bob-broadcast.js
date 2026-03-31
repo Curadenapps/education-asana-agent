@@ -25,21 +25,17 @@ function getWeekBounds() {
 
 async function queryJira(jql) {
   const url = `${JIRA_BASE_URL}/search/jql?jql=${encodeURIComponent(jql)}&maxResults=50&fields=key,summary,status,priority,assignee`;
-  console.log(`Jira URL: ${url.replace(JIRA_TOKEN, '***TOKEN***')}`);
-  console.log(`Jira project key being used: "${JIRA_PROJECT_KEY}"`);
   const response = await fetch(url, {
     headers: {
       "Authorization": `Basic ${Buffer.from(JIRA_EMAIL + ":" + JIRA_TOKEN).toString('base64')}`,
       "Accept": "application/json"
     }
   });
-  console.log(`Jira response status: ${response.status}`);
   const data = await response.json();
-  console.log(`Jira raw response keys: ${Object.keys(data).join(', ')}`);
   if (data.errorMessages) {
     console.log(`Jira error: ${JSON.stringify(data.errorMessages)}`);
   }
-  console.log(`Jira result: total=${data.total}, issues=${data.issues?.length || 0}`);
+  console.log(`Jira raw: ${JSON.stringify(data).substring(0, 500)}`);
   return data.issues || [];
 }
 
@@ -127,15 +123,11 @@ async function main() {
   let asanaTasks = [];
   
   if (JIRA_TOKEN && JIRA_EMAIL) {
-    console.log(`Jira: email=${JIRA_EMAIL}, project=${JIRA_PROJECT_KEY}`);
     try {
       console.log(`Jira: Fetching...`);
       // Debug: fetch all BA issues
       const debugAll = await queryJira(`project = ${JIRA_PROJECT_KEY} ORDER BY updated DESC`);
-      console.log(`Debug - All BA issues: ${debugAll.length}`);
-      if (debugAll.length > 0) {
-        console.log(`Sample keys: ${debugAll.slice(0,5).map(i => i.key).join(', ')}`);
-      }
+      console.log(`Debug - All issues: ${debugAll.length}`);
       const [done, inProgress, blockers] = await Promise.all([
         queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory = Done AND updated >= "${sevenDaysAgo}" ORDER BY updated DESC`),
         queryJira(`project = ${JIRA_PROJECT_KEY} AND statusCategory != Done ORDER BY updated DESC`),
