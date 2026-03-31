@@ -158,7 +158,6 @@ async function main() {
     console.log(`  ASANA_TOKEN: ${ASANA_TOKEN ? "set" : "MISSING"}`);
     console.log(`  ASANA_PROJECT_GID: ${ASANA_PROJECT_GID || "MISSING"}`);
   }
-  }
   
   // Categorize Asana tasks
   const asanaDone = [];
